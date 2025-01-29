@@ -75,7 +75,7 @@ const ParamEditor: React.FC<Props> = ({ initialParams, model }) => {
   return (  
     <div className='main'>  
       {params.map(param => (  
-        <div key={param.id}>  
+        <div key={param.id} className='input-wrapper'>  
           <label>{param.name}</label>  
           <input  
             type="text"  
@@ -84,14 +84,14 @@ const ParamEditor: React.FC<Props> = ({ initialParams, model }) => {
           />  
         </div>  
       ))}  
-      <div>  
+      <div className='input-wrapper'>  
         <input  
           type="text"  
           value={newParamName}  
           onChange={(e) => setNewParamName(e.target.value)} 
           placeholder="Введите название нового параметра"  
         />  
-        <button onClick={handleAddParam}>Добавить параметр</button>  
+        <button onClick={handleAddParam}>+</button>  
       </div>  
     </div>  
   );  
