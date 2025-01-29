@@ -1,9 +1,9 @@
-import React, { useState } from 'react';  
+import React, { useState, useEffect } from 'react';  
 
 interface Param {  
   id: number;  
   name: string;  
-  type: 'string'; // Мы поддерживаем только текстовые параметры, но можно легко расширить  
+  type: 'string'; // Поддерживаем только текстовые параметры  
 }  
 
 interface ParamValue {  
@@ -30,28 +30,36 @@ const ParamEditor: React.FC<Props> = ({ initialParams, model }) => {
     }, {} as { [key: number]: string })  
   });  
 
-  // Состояние для нового параметра  
   const [newParamName, setNewParamName] = useState('');  
-  
-  // Состояние для редактируемого параметра  
   const [editingParamId, setEditingParamId] = useState<number | null>(null);  
+  const [tempParamName, setTempParamName] = useState<string>('');  
 
-  const [tempParamName, setTempParamName] = useState<string>('');
+  useEffect(() => {  
+    // Загружаем данные из localStorage  
+    const storedParams = localStorage.getItem('params');  
+    const storedParamValues = localStorage.getItem('paramValues');  
 
-  // Метод для получения полной структуры модели  
-  const getModel = (): Model => {  
-    const paramValuesArray: ParamValue[] = Object.entries(paramValues).map(([key, value]) => ({  
-      paramId: Number(key),  
-      value: value,  
-    }));  
+    if (storedParams) {  
+      setParams(JSON.parse(storedParams));  
+    }  
 
-    return {  
-      paramValues: paramValuesArray,  
-      colors: [],  
-    };  
-  };  
+    if (storedParamValues) {  
+      setParamValues(JSON.parse(storedParamValues));  
+    } else {  
+      const initialValues = model.paramValues.reduce((acc, paramValue) => {  
+        acc[paramValue.paramId] = paramValue.value;  
+        return acc;  
+      }, {} as { [key: number]: string });  
+      setParamValues(initialValues);  
+    }  
+  }, []);  
 
-  // Обработчик изменения значения  
+  useEffect(() => {  
+    // Сохраняем данные в localStorage  
+    localStorage.setItem('params', JSON.stringify(params));  
+    localStorage.setItem('paramValues', JSON.stringify(paramValues));  
+  }, [params, paramValues]);  
+
   const handleChange = (paramId: number, value: string) => {  
     setParamValues(prevValues => ({  
       ...prevValues,  
@@ -59,70 +67,55 @@ const ParamEditor: React.FC<Props> = ({ initialParams, model }) => {
     }));  
   };  
 
-  // Обработчик добавления нового параметра  
   const handleAddParam = () => {  
-    const newId = params.length > 0 ? params[params.length - 1].id + 1 : 1; // Уникальный идентификатор для нового параметра  
+    const newId = params.length > 0 ? Math.max(...params.map(param => param.id)) + 1 : 1;  
     const newParam: Param = {  
       id: newId,  
-      name: newParamName || `Недавний параметр ${newId}`, 
+      name: newParamName || `Недавний параметр ${newId}`,  
       type: 'string',  
     };  
 
     setParams(prevParams => [...prevParams, newParam]);  
     setParamValues(prevValues => ({  
       ...prevValues,  
-      [newId]: '', // Дефолтное значение для нового параметра  
+      [newId]: '',  
     }));  
-    setNewParamName(''); // Очищаем поле ввода для названия нового параметра  
+    setNewParamName('');  
   };  
 
-   
   const onHandleClickEdit = (paramId: number) => {  
     setEditingParamId(paramId);  
+    // Устанавливаем имя для редактирования текущего параметра  
+    setTempParamName(params.find(param => param.id === paramId)?.name || '');  
   };  
 
-  const onHandleClickSave = (paramId: number) => {
-  
-    const index = params.findIndex((param) => param.id === paramId);
+  const onHandleClickSave = (paramId: number) => {  
+    const updatedParams = params.map(param =>  
+      param.id === paramId ? { ...param, name: tempParamName } : param  
+    );  
 
-    if (index !== -1) {
-      // Создаем новый массив параметров, заменяя старый параметр новым
-      const updatedParams = [
-        ...params.slice(0, index),
-        { ...params[index], name: tempParamName },
-        ...params.slice(index + 1),
-      ];
-
-      // Обновляем состояние params
-      setParams(updatedParams);
-    }
-
-    // Завершаем режим редактирования
-    setEditingParamId(null);
-  };
-
- 
+    setParams(updatedParams);  
+    setEditingParamId(null);  
+    setTempParamName(''); // Сбрасываем значение для нового редактирования  
+  };  
 
   return (  
     <div className='main'>  
       {params.map((param) => (  
         <div key={param.id} className='input-wrapper'>  
           {editingParamId === param.id ? (  
-            <>
-            <input  
-              type="text"  
-              value={tempParamName}  
-              onChange={(e) => setTempParamName(e.target.value)} 
-            />  
-            <div onClick={() => onHandleClickSave(param.id)} className='save-button'>🖬</div>
-            </>
+            <>  
+              <input  
+                type="text"  
+                value={tempParamName} // Отображаем текущее имя параметра для редактирования  
+                onChange={(e) => setTempParamName(e.target.value)}  
+              />  
+              <div onClick={() => onHandleClickSave(param.id)} className='save-button'>🖬</div>  
+            </>  
           ) : (  
-            <label onDoubleClick={() => {
-              setEditingParamId(param.id);
-              setTempParamName(param.name);
-            }}>{param.name}</label> 
+            <label onDoubleClick={() => onHandleClickEdit(param.id)}>{param.name}</label>  
           )}  
-          
+
           <div onClick={() => onHandleClickEdit(param.id)} className='edit-button'>🖉</div>  
           <input  
             type="text"  
@@ -155,7 +148,6 @@ const model: Model = {
     { paramId: 1, value: 'повседневное' },  
     { paramId: 2, value: 'макси' },  
   ],  
-  colors: [],  
 };  
 
 const App: React.FC = () => {  
