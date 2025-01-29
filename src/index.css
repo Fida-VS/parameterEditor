@@ -43,11 +43,22 @@ body {
 }  
 
 label {  
+  display: flex;
   margin-right: 10px; 
   white-space: nowrap;  
   font-weight: bold;
 }  
+
+.edit-button, .save-button {
+  cursor: pointer;
+  width: 20px;  
+  height: 20px;  
+  margin: 0 5px;
+}
  
+.save-button {
+margin-left: 10px;
+}
 
 input[type="text"] {  
   padding: 8px;  
